@@ -43,42 +43,27 @@ target_transform = Compose(
 
 
 def compute_anomaly_score(logits, method):
-    """
-    Compute pixel-wise anomaly score from raw logits.
-
-    Args:
-        logits: torch.Tensor of shape [C, H, W] (raw model output, single image)
-        method: str, one of 'msp', 'maxlogit', 'maxentropy'
-
-    Returns:
-        anomaly_result: np.ndarray of shape [H, W], higher = more anomalous
-    """
     logits_np = logits.data.cpu().numpy()  # [C, H, W]
 
     if method == 'maxlogit':
-        # MaxLogit: anomaly score = negative of max raw logit
         anomaly_result = -np.max(logits_np, axis=0)
 
     elif method == 'msp':
-        # MSP (Maximum Softmax Probability): anomaly score = 1 - max(softmax)
-        # Use float64 for numerical stability
         logits_t = logits.unsqueeze(0).float()          # [1, C, H, W]
         softmax = F.softmax(logits_t, dim=1).squeeze(0) # [C, H, W]
         softmax_np = softmax.data.cpu().numpy()
         anomaly_result = 1.0 - np.max(softmax_np, axis=0)
 
     elif method == 'maxentropy':
-        # Max Entropy: anomaly score = Shannon entropy of softmax distribution
         logits_t = logits.unsqueeze(0).float()          # [1, C, H, W]
         softmax = F.softmax(logits_t, dim=1).squeeze(0) # [C, H, W]
         softmax_np = softmax.data.cpu().numpy()
-        # H(x) = -sum(p * log(p)), clamp to avoid log(0)
         softmax_np = np.clip(softmax_np, 1e-9, 1.0)
         entropy = -np.sum(softmax_np * np.log(softmax_np), axis=0)  # [H, W]
         anomaly_result = entropy
 
     else:
-        raise ValueError(f"Unknown method '{method}'. Choose from: msp, maxlogit, maxentropy")
+        raise ValueError(f"Unknown method '{method}'")
 
     return anomaly_result
 
@@ -86,143 +71,162 @@ def compute_anomaly_score(logits, method):
 def main():
     parser = ArgumentParser()
     parser.add_argument(
-        "--input",
-        default="/home/shyam/Mask2Former/unk-eval/RoadObsticle21/images/*.webp",
-        nargs="+",
-        help="A list of space separated input images; "
-        "or a single glob pattern such as 'directory/*.jpg'",
+        "--base_dir",
+        default="/content/drive/MyDrive/project/Anomaly_Validation_Datasets/Validation_Dataset",
+        help="Percorso della cartella principale che contiene le sottocartelle dei 5 dataset",
     )
     parser.add_argument('--loadDir', default="../trained_models/")
     parser.add_argument('--loadWeights', default="erfnet_pretrained.pth")
     parser.add_argument('--loadModel', default="erfnet.py")
-    parser.add_argument('--subset', default="val")  # can be val or train (must have labels)
-    parser.add_argument('--datadir', default="/home/shyam/ViT-Adapter/segmentation/data/cityscapes/")
+    parser.add_argument('--subset', default="val")  
     parser.add_argument('--num-workers', type=int, default=4)
     parser.add_argument('--batch-size', type=int, default=1)
     parser.add_argument('--cpu', action='store_true')
-    parser.add_argument(
-        '--method',
-        default='maxlogit',
-        choices=['msp', 'maxlogit', 'maxentropy'],
-        help="Anomaly scoring method: 'msp' (Maximum Softmax Probability), "
-             "'maxlogit' (Maximum Logit Score), 'maxentropy' (Maximum Entropy). "
-             "Default: maxlogit"
-    )
+    
     args = parser.parse_args()
 
-    anomaly_score_list = []
-    ood_gts_list = []
+    # Mappatura dei dataset e relative estensioni delle immagini
+    DATASETS = {
+        "FS_LostFound_full": "png",
+        "RoadAnomaly": "jpg",
+        "RoadAnomaly21": "png",
+        "RoadObsticle21": "webp",
+        "fs_static": "jpg"
+    }
+
+    methods_to_evaluate = ['msp', 'maxlogit', 'maxentropy']
 
     if not os.path.exists('results.txt'):
         open('results.txt', 'w').close()
-    file = open('results.txt', 'a')
 
-    modelpath = args.loadDir + args.loadModel
-    weightspath = args.loadDir + args.loadWeights
+    modelpath = os.path.join(args.loadDir, args.loadModel)
+    weightspath = os.path.join(args.loadDir, args.loadWeights)
 
     print("Loading model: " + modelpath)
     print("Loading weights: " + weightspath)
-    print(f"Anomaly scoring method: {args.method.upper()}")
 
     model = ERFNet(NUM_CLASSES)
 
     if not args.cpu:
         model = torch.nn.DataParallel(model).cuda()
 
-    def load_my_state_dict(model, state_dict):  # custom function to load model when not all dict elements
+    def load_my_state_dict(model, state_dict): 
         own_state = model.state_dict()
         for name, param in state_dict.items():
             if name not in own_state:
                 if name.startswith("module."):
                     own_state[name.split("module.")[-1]].copy_(param)
                 else:
-                    print(name, " not loaded")
                     continue
             else:
                 own_state[name].copy_(param)
         return model
 
     model = load_my_state_dict(model, torch.load(weightspath, map_location=lambda storage, loc: storage))
-    print("Model and weights LOADED successfully")
+    print("Model and weights LOADED successfully\n")
     model.eval()
 
-    for path in glob.glob(os.path.expanduser(str(args.input[0]))):
-        print(path)
-        # input_transform already returns a [C, H, W] tensor via ToTensor()
-        # unsqueeze(0) adds the batch dimension -> [1, C, H, W]
-        images = input_transform(Image.open(path).convert('RGB')).unsqueeze(0).float()
+    # Apriamo il file una sola volta per aggiungere i risultati
+    with open('results.txt', 'a') as file:
+        
+        # Iteriamo su tutti e 5 i dataset
+        for dataset_name, ext in DATASETS.items():
+            print(f"==================================================")
+            print(f" Inizio valutazione Dataset: {dataset_name}")
+            print(f"==================================================")
+            file.write(f"\n\n=== Dataset: {dataset_name} ===\n")
 
-        if not args.cpu:
-            images = images.cuda()
+            search_pattern = os.path.join(args.base_dir, dataset_name, "images", f"*.{ext}")
+            image_paths = glob.glob(search_pattern)
 
-        with torch.no_grad():
-            result = model(images)  # [1, C, H, W]
+            if len(image_paths) == 0:
+                print(f"ATTENZIONE: Nessuna immagine trovata in {search_pattern}")
+                file.write(f"Nessuna immagine trovata.\n")
+                continue
 
-        # Squeeze batch dim -> [C, H, W]
-        logits = result.squeeze(0)
+            # Inizializza le liste per questo specifico dataset
+            anomaly_score_lists = {method: [] for method in methods_to_evaluate}
+            ood_gts_list = []
 
-        # Compute anomaly score based on chosen method
-        anomaly_result = compute_anomaly_score(logits, args.method)
+            for path in image_paths:
+                # 1. Carica e prepara la Ground Truth
+                pathGT = path.replace("images", "labels_masks")
+                # Indipendentemente da jpg o webp, la ground truth è sempre un .png
+                base_path_gt, _ = os.path.splitext(pathGT)
+                pathGT = base_path_gt + ".png"
 
-        pathGT = path.replace("images", "labels_masks")
-        if "RoadObsticle21" in pathGT:
-            pathGT = pathGT.replace("webp", "png")
-        if "fs_static" in pathGT:
-            pathGT = pathGT.replace("jpg", "png")
-        if "RoadAnomaly" in pathGT:
-            pathGT = pathGT.replace("jpg", "png")
+                if not os.path.exists(pathGT):
+                    continue
 
-        mask = Image.open(pathGT)
-        mask = target_transform(mask)
-        ood_gts = np.array(mask)
+                mask = Image.open(pathGT)
+                mask = target_transform(mask)
+                ood_gts = np.array(mask)
 
-        if "RoadAnomaly" in pathGT:
-            ood_gts = np.where((ood_gts == 2), 1, ood_gts)
-        if "LostAndFound" in pathGT:
-            ood_gts = np.where((ood_gts == 0), 255, ood_gts)
-            ood_gts = np.where((ood_gts == 1), 0, ood_gts)
-            ood_gts = np.where((ood_gts > 1) & (ood_gts < 201), 1, ood_gts)
+                # Mappatura etichette
+                if "RoadAnomaly" in pathGT: # Copre sia RoadAnomaly che RoadAnomaly21
+                    ood_gts = np.where((ood_gts == 2), 1, ood_gts)
+                if "LostAndFound" in pathGT in pathGT:
+                    ood_gts = np.where((ood_gts == 0), 255, ood_gts)
+                    ood_gts = np.where((ood_gts == 1), 0, ood_gts)
+                    ood_gts = np.where((ood_gts > 1) & (ood_gts < 201), 1, ood_gts)
+                if "Streethazard" in pathGT:
+                    ood_gts = np.where((ood_gts == 14), 255, ood_gts)
+                    ood_gts = np.where((ood_gts < 20), 0, ood_gts)
+                    ood_gts = np.where((ood_gts == 255), 1, ood_gts)
 
-        if "Streethazard" in pathGT:
-            ood_gts = np.where((ood_gts == 14), 255, ood_gts)
-            ood_gts = np.where((ood_gts < 20), 0, ood_gts)
-            ood_gts = np.where((ood_gts == 255), 1, ood_gts)
+                if 1 not in np.unique(ood_gts):
+                    # Nessuna anomalia, saltiamo
+                    continue
+                
+                ood_gts_list.append(ood_gts)
 
-        if 1 not in np.unique(ood_gts):
-            continue
-        else:
-            ood_gts_list.append(ood_gts)
-            anomaly_score_list.append(anomaly_result)
+                # 2. Inferenza del modello
+                images = input_transform(Image.open(path).convert('RGB')).unsqueeze(0).float()
+                if not args.cpu:
+                    images = images.cuda()
 
-        del result, anomaly_result, ood_gts, mask
-        torch.cuda.empty_cache()
+                with torch.no_grad():
+                    result = model(images)  # [1, C, H, W]
 
-    file.write("\n")
+                logits = result.squeeze(0)
 
-    ood_gts = np.array(ood_gts_list)
-    anomaly_scores = np.array(anomaly_score_list)
+                # 3. Calcoliamo gli score per i 3 metodi
+                for method in methods_to_evaluate:
+                    anomaly_result = compute_anomaly_score(logits, method)
+                    anomaly_score_lists[method].append(anomaly_result)
 
-    ood_mask = (ood_gts == 1)
-    ind_mask = (ood_gts == 0)
+                del result, logits, ood_gts, mask
+                torch.cuda.empty_cache()
 
-    ood_out = anomaly_scores[ood_mask]
-    ind_out = anomaly_scores[ind_mask]
+            # --- Calcolo metriche per il dataset corrente ---
+            if len(ood_gts_list) == 0:
+                print(f"Nessun dato valido (anomalia) trovato in {dataset_name}.")
+                file.write("Nessuna anomalia rilevata nelle maschere.\n")
+                continue
 
-    ood_label = np.ones(len(ood_out))
-    ind_label = np.zeros(len(ind_out))
+            ood_gts = np.array(ood_gts_list)
+            ood_mask = (ood_gts == 1)
+            ind_mask = (ood_gts == 0)
 
-    val_out = np.concatenate((ind_out, ood_out))
-    val_label = np.concatenate((ind_label, ood_label))
+            for method in methods_to_evaluate:
+                anomaly_scores = np.array(anomaly_score_lists[method])
+                
+                ood_out = anomaly_scores[ood_mask]
+                ind_out = anomaly_scores[ind_mask]
 
-    prc_auc = average_precision_score(val_label, val_out)
-    fpr = fpr_at_95_tpr(val_out, val_label)
+                ood_label = np.ones(len(ood_out))
+                ind_label = np.zeros(len(ind_out))
 
-    print(f'Method: {args.method.upper()}')
-    print(f'AUPRC score: {prc_auc * 100.0:.2f}')
-    print(f'FPR@TPR95:   {fpr * 100.0:.2f}')
+                val_out = np.concatenate((ind_out, ood_out))
+                val_label = np.concatenate((ind_label, ood_label))
 
-    file.write(f'    Method: {args.method.upper()}   AUPRC score: {prc_auc * 100.0:.4f}   FPR@TPR95: {fpr * 100.0:.4f}')
-    file.close()
+                prc_auc = average_precision_score(val_label, val_out)
+                fpr = fpr_at_95_tpr(val_out, val_label)
+
+                print(f' -> {method.upper()} | AUPRC: {prc_auc * 100.0:.2f}% | FPR@TPR95: {fpr * 100.0:.2f}%')
+                file.write(f'Method: {method.upper()} | AUPRC: {prc_auc * 100.0:.4f} | FPR@TPR95: {fpr * 100.0:.4f}\n')
+
+            print("\n")
 
 
 if __name__ == '__main__':
