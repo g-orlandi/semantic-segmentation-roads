@@ -13,3 +13,4 @@ fvcore==0.1.5.post20221221
 torchmetrics==1.7.1
 pycocotools==2.0.8
 loralib
+ood-metrics==0.3.0

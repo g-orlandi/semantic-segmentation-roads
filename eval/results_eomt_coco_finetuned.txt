@@ -1,0 +1,35 @@
+
+
+=== Dataset: FS_LostFound_full ===
+Method: MSP        | AUPRC: 32.1372 | FPR@TPR95: 27.3169
+Method: MAXLOGIT   | AUPRC: 32.2549 | FPR@TPR95: 27.8019
+Method: MAXENTROPY | AUPRC: 33.0395 | FPR@TPR95: 26.7349
+Method: RBA        | AUPRC: 31.0664 | FPR@TPR95: 82.7283
+
+
+=== Dataset: RoadAnomaly ===
+Method: MSP        | AUPRC: 50.3222 | FPR@TPR95: 28.3903
+Method: MAXLOGIT   | AUPRC: 50.2932 | FPR@TPR95: 27.9487
+Method: MAXENTROPY | AUPRC: 50.9382 | FPR@TPR95: 26.9118
+Method: RBA        | AUPRC: 47.5198 | FPR@TPR95: 82.4642
+
+
+=== Dataset: RoadAnomaly21 ===
+Method: MSP        | AUPRC: 69.4073 | FPR@TPR95: 36.3173
+Method: MAXLOGIT   | AUPRC: 68.9283 | FPR@TPR95: 39.7305
+Method: MAXENTROPY | AUPRC: 69.2643 | FPR@TPR95: 34.6775
+Method: RBA        | AUPRC: 48.4285 | FPR@TPR95: 88.9678
+
+
+=== Dataset: RoadObsticle21 ===
+Method: MSP        | AUPRC: 72.4741 | FPR@TPR95: 1.8035
+Method: MAXLOGIT   | AUPRC: 71.3852 | FPR@TPR95: 1.8132
+Method: MAXENTROPY | AUPRC: 70.5914 | FPR@TPR95: 1.7579
+Method: RBA        | AUPRC: 57.2343 | FPR@TPR95: 4.9358
+
+
+=== Dataset: fs_static ===
+Method: MSP        | AUPRC: 74.0349 | FPR@TPR95: 10.7293
+Method: MAXLOGIT   | AUPRC: 74.0434 | FPR@TPR95: 10.4381
+Method: MAXENTROPY | AUPRC: 74.1805 | FPR@TPR95: 9.9919
+Method: RBA        | AUPRC: 69.8261 | FPR@TPR95: 93.4491
