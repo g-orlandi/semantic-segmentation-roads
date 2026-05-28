@@ -30,20 +30,25 @@ def load_weights(model, state_dict_path, device):
 
     return model
 
+from pathlib import Path
+import yaml
+
+
 def get_config(coco=False):
     """
     Load the YAML configuration for either the Cityscapes or COCO model.
     """
+    project_root = Path(__file__).resolve().parents[1]
+
     if coco:
-        config_path = 'configs/eomt_base_640_coco.yaml'
-    else:  
-        config_path = 'configs/eomt_base_640_cs.yaml'
-    
+        config_path = project_root / "eomt" / "configs" / "eomt_base_640_coco.yaml"
+    else:
+        config_path = project_root / "eomt" / "configs" / "eomt_base_640_cs.yaml"
+
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
 
     return config
-
 
 def build_model(config, img_size, num_classes, coco=False, masked_attn_enabled=False):
     """

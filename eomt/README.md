@@ -1,6 +1,24 @@
 # EoMT
 
-This is almost the original repository of the authors of EoMT if something is not clear refer to the [original repo](https://github.com/tue-mps/eomt). You will have to use the code in this folder and adapt it with the eval folder to be able to evaluate and train a EoMT model if needed. You can find a EoMT model trained on Cityscapes dataset with the [config file](eomt/configs/dinov2/cityscapes/semantic) at this [link](https://drive.google.com/drive/folders/1q2vHUzora2nP52fP50zmoQAykWuwoGav?usp=drive_link).
+This folder contains an adapted copy of the original EoMT repository. Most of the original structure is preserved.
+
+In this project, EoMT is mainly used as the segmentation backbone/model implementation. The additional evaluation utilities used for our experiments are placed outside this folder, mainly in:
+
+utils/ 
+  ├── data_loading.py 
+  ├── model_loading.py 
+  └── label_mapping.py
+
+eomt/ 
+  └── semantic_eval.py # the only project-specific addition inside this subdirectory
+
+The original EoMT configuration files still use module paths such as:
+
+models.*
+datasets.*
+training.*
+
+Therefore, when running notebooks from outside this folder, both the project root and the eomt/ directory should be added to sys.path.
 
 ## Requirements Installation
 
