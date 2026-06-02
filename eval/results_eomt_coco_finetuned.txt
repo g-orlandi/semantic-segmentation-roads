@@ -1,0 +1,63 @@
+
+
+=== Dataset: FS_LostFound_full ===
+Method: MSP        | AUPRC: 31.0317 | FPR@TPR95: 22.9390
+Method: MAXLOGIT   | AUPRC: 31.1949 | FPR@TPR95: 23.4510
+Method: MAXENTROPY | AUPRC: 32.2647 | FPR@TPR95: 22.9349
+Method: RBA        | AUPRC: 28.5375 | FPR@TPR95: 78.0588
+
+
+=== Dataset: RoadAnomaly ===
+Method: MSP        | AUPRC: 51.9117 | FPR@TPR95: 31.5592
+Method: MAXLOGIT   | AUPRC: 51.4925 | FPR@TPR95: 32.8570
+Method: MAXENTROPY | AUPRC: 51.4478 | FPR@TPR95: 32.2022
+Method: RBA        | AUPRC: 44.9603 | FPR@TPR95: 90.4428
+
+
+=== Dataset: RoadAnomaly21 ===
+Method: MSP        | AUPRC: 56.4043 | FPR@TPR95: 99.6548
+Method: MAXLOGIT   | AUPRC: 55.7954 | FPR@TPR95: 99.6360
+Method: MAXENTROPY | AUPRC: 55.8381 | FPR@TPR95: 99.6054
+Method: RBA        | AUPRC: 35.5530 | FPR@TPR95: 96.4738
+
+
+=== Dataset: RoadObsticle21 ===
+Method: MSP        | AUPRC: 48.6022 | FPR@TPR95: 2.7155
+Method: MAXLOGIT   | AUPRC: 47.2790 | FPR@TPR95: 2.6585
+Method: MAXENTROPY | AUPRC: 46.1557 | FPR@TPR95: 2.3858
+Method: RBA        | AUPRC: 32.1307 | FPR@TPR95: 98.1601
+
+
+=== Dataset: fs_static ===
+Method: MSP        | AUPRC: 76.1876 | FPR@TPR95: 12.5303
+Method: MAXLOGIT   | AUPRC: 76.0001 | FPR@TPR95: 13.4174
+Method: MAXENTROPY | AUPRC: 76.5268 | FPR@TPR95: 12.2145
+Method: RBA        | AUPRC: 68.6158 | FPR@TPR95: 95.9966
+
+
+=== Dataset: RoadAnomaly ===
+Method: MSP        | AUPRC: 51.3055 | FPR@TPR95: 29.7054
+Method: MAXLOGIT   | AUPRC: 50.9425 | FPR@TPR95: 29.1421
+Method: MAXENTROPY | AUPRC: 50.9895 | FPR@TPR95: 27.5536
+Method: RBA        | AUPRC: 43.7427 | FPR@TPR95: 86.5666
+
+
+=== Dataset: RoadAnomaly21 ===
+Method: MSP        | AUPRC: 57.4514 | FPR@TPR95: 98.6435
+Method: MAXLOGIT   | AUPRC: 56.8327 | FPR@TPR95: 98.6001
+Method: MAXENTROPY | AUPRC: 56.8596 | FPR@TPR95: 97.0902
+Method: RBA        | AUPRC: 35.1849 | FPR@TPR95: 95.5786
+
+
+=== Dataset: RoadObsticle21 ===
+Method: MSP        | AUPRC: 47.3770 | FPR@TPR95: 2.5060
+Method: MAXLOGIT   | AUPRC: 46.2075 | FPR@TPR95: 2.4532
+Method: MAXENTROPY | AUPRC: 45.2099 | FPR@TPR95: 2.2803
+Method: RBA        | AUPRC: 31.9813 | FPR@TPR95: 47.0879
+
+
+=== Dataset: fs_static ===
+Method: MSP        | AUPRC: 71.4232 | FPR@TPR95: 12.1758
+Method: MAXLOGIT   | AUPRC: 71.1243 | FPR@TPR95: 13.1539
+Method: MAXENTROPY | AUPRC: 71.6127 | FPR@TPR95: 11.9091
+Method: RBA        | AUPRC: 64.7091 | FPR@TPR95: 96.0809

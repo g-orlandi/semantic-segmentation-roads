@@ -50,7 +50,7 @@ def get_config(coco=False):
 
     return config
 
-def build_model(config, img_size, num_classes, coco=False, masked_attn_enabled=False):
+def build_model(config, img_size, num_classes, coco=False, masked_attn_enabled=True):
     """
     Build the EoMT Lightning model from a YAML configuration.
 

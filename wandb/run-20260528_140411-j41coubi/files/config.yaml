@@ -1,0 +1,176 @@
+_wandb:
+    value:
+        cli_version: 0.27.0
+        e:
+            exd2wilz70trfnyucbwrjecy4uhue9z1:
+                codePath: 01_only_class_head.ipynb
+                colab: https://colab.research.google.com/notebook#fileId=1tHwt6dUWSZfUNWHza1yZzwlxPWs4j75x
+                cpu_count: 1
+                cpu_count_logical: 2
+                cudaVersion: "13.0"
+                disk:
+                    /:
+                        total: "120942624768"
+                        used: "60392046592"
+                email: ai.group.3434@gmail.com
+                executable: /usr/bin/python3
+                git:
+                    commit: 6102c28366e7c49a3a38ffaf2d4ea4acc1dd9cfb
+                    remote: https://github.com/g-orlandi/semantic-segmentation-roads.git
+                gpu: Tesla T4
+                gpu_count: 1
+                gpu_nvidia:
+                    - architecture: Turing
+                      cudaCores: 2560
+                      memoryTotal: "16106127360"
+                      name: Tesla T4
+                      uuid: GPU-83f9e87e-3589-5f7f-84de-27beaf97cad8
+                host: bc1a8e67b5aa
+                memory:
+                    total: "13605830656"
+                os: Linux-6.6.122+-x86_64-with-glibc2.35
+                program: 01_only_class_head.ipynb
+                python: CPython 3.12.13
+                root: .
+                startedAt: "2026-05-28T14:04:11.828945Z"
+                writerId: exd2wilz70trfnyucbwrjecy4uhue9z1
+        m:
+            - "1": trainer/global_step
+              "6":
+                - 3
+              "7": []
+            - "2": '*'
+              "5": 1
+              "6":
+                - 1
+              "7": []
+        python_version: 3.12.13
+        t:
+            "1":
+                - 1
+                - 2
+                - 3
+                - 5
+                - 11
+                - 12
+                - 41
+                - 49
+                - 51
+                - 53
+                - 63
+                - 71
+                - 106
+            "2":
+                - 1
+                - 2
+                - 3
+                - 5
+                - 11
+                - 12
+                - 41
+                - 49
+                - 51
+                - 53
+                - 63
+                - 71
+                - 106
+            "3":
+                - 2
+                - 7
+                - 13
+                - 41
+                - 66
+            "4": 3.12.13
+            "5": 0.27.0
+            "6": 4.56.1
+            "8":
+                - 1
+                - 12
+            "12": 0.27.0
+            "13": linux-x86_64
+attn_mask_annealing_enabled:
+    value: true
+attn_mask_annealing_end_steps:
+    value:
+        - 6634
+        - 11609
+        - 16585
+attn_mask_annealing_start_steps:
+    value:
+        - 3317
+        - 8292
+        - 13268
+batch_size:
+    value: 2
+check_empty_targets:
+    value: false
+ckpt_path:
+    value: null
+class_coefficient:
+    value: 2
+color_jitter_enabled:
+    value: true
+delta_weights:
+    value: false
+dice_coefficient:
+    value: 5
+finetuning:
+    value: class_head_only_15ep
+ignore_idx:
+    value: 255
+img_size:
+    value:
+        - 640
+        - 640
+importance_sample_ratio:
+    value: 0.75
+llrd:
+    value: 0.8
+llrd_l2_enabled:
+    value: true
+load_ckpt_class_head:
+    value: true
+lr:
+    value: 0.0001
+lr_mult:
+    value: 1
+mask_coefficient:
+    value: 5
+mask_thresh:
+    value: 0.8
+max_epochs:
+    value: 15
+network:
+    value: null
+no_object_coefficient:
+    value: 0.1
+num_classes:
+    value: 19
+num_points:
+    value: 12544
+num_workers:
+    value: 0
+overlap_thresh:
+    value: 0.8
+oversample_ratio:
+    value: 3
+path:
+    value: /content/drive/MyDrive/project/
+poly_power:
+    value: 0.9
+precision:
+    value: 16-mixed
+real_epochs:
+    value: 15
+run_name:
+    value: head_only_15ep_20260512_0633
+scale_range:
+    value:
+        - 0.5
+        - 2
+warmup_steps:
+    value:
+        - 500
+        - 1000
+weight_decay:
+    value: 0.05

@@ -7,28 +7,19 @@ from sklearn.metrics import average_precision_score
 import torch.nn.functional as F
 from ood_metrics import fpr_at_95_tpr
 
-def compute_anomaly_scaled(semantic_scores, method='msp', T=1.0):
+def compute_anomaly_scaled(semantic_scores, T=1.0):
     """
     Calcola lo score di anomalia applicando la Temperature Scaling (T).
     """
     # Spostiamo momentaneamente su CPU/GPU come float32 per sicurezza matematica
     scores_t = semantic_scores.unsqueeze(0).float()
     
-    if method == 'msp':
-        # Scalatura tramite divisione per la Temperatura T
-        logits_scaled = scores_t / T
-        probs = F.softmax(logits_scaled, dim=1).squeeze(0)
-        return 1.0 - np.max(probs.numpy(), axis=0)
-        
-    elif method == 'maxentropy':
-        logits_scaled = scores_t / T
-        probs = F.softmax(logits_scaled, dim=1).squeeze(0)
-        probs_np = np.clip(probs.numpy(), 1e-9, 1.0)
-        return -np.sum(probs_np * np.log(probs_np), axis=0)
-    
-    else:
-        raise ValueError("Temperature scaling supportata principalmente per MSP e MaxEntropy.")
-
+    # Scalatura tramite divisione per la Temperatura T
+    logits_scaled = scores_t / T
+    probs = F.softmax(logits_scaled, dim=1).squeeze(0)
+    return 1.0 - np.max(probs.numpy(), axis=0)
+ 
+ 
 def main():
     # --- Configurazione Percorsi ---
     base_dir = "/content/drive/MyDrive/project/Anomaly_Validation_Datasets/Validation_Dataset"
@@ -44,7 +35,8 @@ def main():
     
     # Scegli quale modello analizzare: 'cityscapes', 'coco', oppure 'coco_finetuned'
     MODELS_TO_TEST = ['cityscapes']
-    TEMPERATURES = [0.5, 0.75, 1.0, 1.1, 1.5, 2.0]  # Elenco delle temperature da testare
+    TEMPERATURES = [0.25, 0.5, 0.75, 1.0, 1.1, 1.25, 1.5, 2.0, 3.0, 5.0]
+    # TEMPERATURES = [5.0]
     
     for model_name in MODELS_TO_TEST:
         print(f"\n=======================================================")
@@ -85,22 +77,20 @@ def main():
                     ood_gts = np.array(mask_pil)
                     
                     # Mappature Standard OOD (identiche al tuo script principale)
-                    if "RoadAnomaly" in pathGT:
-                        ood_gts = np.where((ood_gts == 2), 1, ood_gts)
-                    if "LostAndFound" in pathGT:
-                        ood_gts = np.where((ood_gts == 0), 255, ood_gts)
-                        ood_gts = np.where((ood_gts == 1), 0, ood_gts)
-                        ood_gts = np.where((ood_gts > 1) & (ood_gts < 201), 1, ood_gts)
-                    if "Streethazard" in pathGT:
-                        ood_gts = np.where((ood_gts == 14), 255, ood_gts)
-                        ood_gts = np.where((ood_gts < 20), 0, ood_gts)
-                        ood_gts = np.where((ood_gts == 255), 1, ood_gts)
+                    if dataset_name == "RoadAnomaly":
+                        raw = ood_gts.copy()
+                    
+                        mapped = np.full_like(raw, 255)
+                        mapped[raw == 0] = 0      # in-distribution / background valido
+                        mapped[raw == 2] = 1      # anomaly / OOD
+                    
+                        ood_gts = mapped
                         
                     ood_mask = (ood_gts == 1)
                     ind_mask = (ood_gts == 0)
                     
-                    # 3. Applica la temperatura T sul metodo MSP (puoi cambiare in 'maxentropy')
-                    anomaly_result = compute_anomaly_scaled(semantic_scores, method='msp', T=T)
+                    # 3. Applica la temperatura T sul metodo MSP
+                    anomaly_result = compute_anomaly_scaled(semantic_scores, T=T)
                     
                     ood_scores_list.append(anomaly_result[ood_mask].astype(np.float32))
                     # Sotto-campioniamo leggermente gli inliers per velocizzare ulteriormente il calcolo matematico delle metriche

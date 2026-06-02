@@ -14,19 +14,27 @@ import glob
 import torch
 import random
 import yaml
-import importlib
 from PIL import Image
 import numpy as np
 import gc
 
 # Import dinamico del framework EoMT
 import sys
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../eomt')))
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
+
+sys.path.append(PROJECT_ROOT)
+sys.path.append(os.path.join(PROJECT_ROOT, "eomt"))
+
 
 from argparse import ArgumentParser
 from ood_metrics import fpr_at_95_tpr
 from sklearn.metrics import average_precision_score
 import torch.nn.functional as F
+
+from utils.model_loading import build_model, load_weights
+from utils.label_mapping import aggregate_coco_scores_to_cityscapes
 
 # --- Fissaggio del Seme (Seed) per la Riproducibilità ---
 seed = 42
@@ -34,13 +42,12 @@ random.seed(seed)
 np.random.seed(seed)
 torch.manual_seed(seed)
 torch.backends.cudnn.deterministic = True
-torch.backends.cudnn.benchmark = True
+torch.backends.cudnn.benchmark = False
 
 # --- Costanti Globali ---
 NUM_CHANNELS = 3
 
-device = 0
-
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 def compute_anomaly_score(semantic_scores, method='msp'):
@@ -71,7 +78,7 @@ def compute_anomaly_score(semantic_scores, method='msp'):
         return 1.0 - np.max(probs_np, axis=0)
 
     elif method == 'maxentropy':
-        # Normalizziamo con Softmax per ottenere probabilità vere
+        # Normalizziamo con Softmax per ottenere probabsilità vere
         probs = F.softmax(semantic_scores.unsqueeze(0).float(), dim=1).squeeze(0)
         probs_np = probs.cpu().numpy()
         probs_np = np.clip(probs_np, 1e-9, 1.0)
@@ -91,42 +98,37 @@ def main():
     parser.add_argument('--model', type=str, default='cityscapes', 
                         choices=['cityscapes', 'coco', 'coco_finetuned'],
                         help='Modello da utilizzare per la valutazione')
-    parser.add_argument('--num-workers', type=int, default=4)
-    parser.add_argument('--batch-size', type=int, default=1)
-    parser.add_argument('--cpu', action='store_true')
+    parser.add_argument('--save_inf', action='store_true')
     args = parser.parse_args()
 
     DATASETS = {
-        "FS_LostFound_full": "png",
-        # "RoadAnomaly":       "jpg",
-        # "RoadAnomaly21":     "png",
-        # "RoadObsticle21":    "webp",
-        # "fs_static":         "jpg"
+        # "FS_LostFound_full": "png",
+        "RoadAnomaly":       "jpg",
+        "RoadAnomaly21":     "png",
+        "RoadObsticle21":    "webp",
+        "fs_static":         "jpg"
     }
 
     methods_to_evaluate = ['msp', 'maxlogit', 'maxentropy', 'rba']
 
     MODEL_CONFIGS = {
         "cityscapes": {
-            "config_path": "../eomt/configs/dinov2/cityscapes/semantic/eomt_base_640.yaml",
-            "state_dict_path": "/content/drive/MyDrive/project/eomt_cityscapes.bin",
+            "config_path": "../eomt/configs/eomt_base_640_cs.yaml",
+            "state_dict_path": "/content/drive/MyDrive/project/models_weights/eomt_cityscapes.bin",
             "num_classes": 19,
             "img_size": (1024, 1024),
-            "model_type": "semantic",
         },
         "coco": {
-            "config_path": "../eomt/configs/dinov2/coco/panoptic/eomt_base_640_2x.yaml",
-            "state_dict_path": "/content/drive/MyDrive/project/eomt_coco.bin",
+            "config_path": "../eomt/configs/eomt_base_640_coco.yaml",
+            "state_dict_path": "/content/drive/MyDrive/project/models_weights/eomt_coco.bin",
             "num_classes": 133,
             "img_size": (640, 640),
-            "model_type": "panoptic",
         },
         "coco_finetuned": {
-            "config_path": "../eomt/configs/dinov2/cityscapes/semantic/eomt_base_640.yaml",
-            "state_dict_path": "/content/drive/MyDrive/project/eomt_coco_finetuned.bin",
+            "config_path": "../eomt/configs/eomt_base_640_cs.yaml",
+            "state_dict_path": "/content/drive/MyDrive/project/models_weights/eomt_coco_finetuned.bin",
             "num_classes": 19,
             "img_size": (640, 640),
-            "model_type": "semantic",
         },
     }
 
@@ -146,40 +148,13 @@ def main():
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
 
-    # Inizializza l'Encoder (Backbone ViT/Dinov2)
-    encoder_cfg = config["model"]["init_args"]["network"]["init_args"]["encoder"]
-    encoder_module_name, encoder_class_name = encoder_cfg["class_path"].rsplit(".", 1)
-    encoder_cls = getattr(importlib.import_module(encoder_module_name), encoder_class_name)
-    encoder = encoder_cls(img_size=img_size, **encoder_cfg.get("init_args", {}))
+    is_coco = (args.model == 'coco') 
+    model = build_model(config, img_size, num_classes, coco=is_coco, masked_attn_enabled=True).eval()
 
-    # Inizializza il Network (L'architettura EoMT vera e propria basata su Mask2Former)
-    network_cfg = config["model"]["init_args"]["network"]
-    network_module_name, network_class_name = network_cfg["class_path"].rsplit(".", 1)
-    network_cls = getattr(importlib.import_module(network_module_name), network_class_name)
-    network_kwargs = {k: v for k, v in network_cfg["init_args"].items() if k != "encoder"}
-    network = network_cls(masked_attn_enabled=False, num_classes=num_classes, encoder=encoder, **network_kwargs)
-
-    # Inizializza il Lightning Module (Wrapper per PyTorch Lightning)
-    lit_module_name, lit_class_name = config["model"]["class_path"].rsplit(".", 1)
-    lit_cls = getattr(importlib.import_module(lit_module_name), lit_class_name)
-    model_kwargs = {k: v for k, v in config["model"]["init_args"].items() if k != "network"}
-    
-    if model_config["model_type"] == "panoptic":
-        # Passiamo le 53 stuff classes usate in COCO Panoptic (ID da 80 a 132 compresi)
-        model_kwargs["stuff_classes"] = list(range(80, 133))
-
-    model = lit_cls(img_size=img_size, num_classes=num_classes, network=network, **model_kwargs)
-    
-    # Carica i pesi pre-addestrati
     print(f"Caricamento pesi da: {state_dict_path}")
-    state_dict = torch.load(
-        state_dict_path, map_location=f"cuda:{device}", weights_only=True
-    )
-    model.load_state_dict(state_dict, strict=False)
+    model = load_weights(model, state_dict_path, device)
 
-    # Se usiamo la GPU, avvolgiamo il modello in DataParallel
-    if not args.cpu:
-        model = torch.nn.DataParallel(model).cuda()
+    model = torch.nn.DataParallel(model).to(device)
 
     model.eval()
 
@@ -241,16 +216,15 @@ def main():
                 # 1   = Anomalia / Ostacolo (Out-of-Distribution)
                 # 0   = Strada / Normale (In-Distribution)
                 # 255 = Ignora (Cielo, Auto, o pixel ambigui)
-                if "RoadAnomaly" in pathGT:
-                    ood_gts = np.where((ood_gts == 2), 1, ood_gts)
-                if "LostAndFound" in pathGT:
-                    ood_gts = np.where((ood_gts == 0), 255, ood_gts)
-                    ood_gts = np.where((ood_gts == 1), 0, ood_gts)
-                    ood_gts = np.where((ood_gts > 1) & (ood_gts < 201), 1, ood_gts)
-                if "Streethazard" in pathGT:
-                    ood_gts = np.where((ood_gts == 14), 255, ood_gts)
-                    ood_gts = np.where((ood_gts < 20), 0, ood_gts)
-                    ood_gts = np.where((ood_gts == 255), 1, ood_gts)
+                if dataset_name == "RoadAnomaly":
+                    raw = ood_gts.copy()
+                
+                    mapped = np.full_like(raw, 255)
+                    mapped[raw == 0] = 0      # in-distribution / background valido
+                    mapped[raw == 2] = 1      # anomaly / OOD
+                
+                    ood_gts = mapped
+
 
                 # Se in questa immagine non c'è nemmeno un pixel di anomalia, saltiamo l'immagine.
                 if 1 not in np.unique(ood_gts):
@@ -268,10 +242,7 @@ def main():
                     crops, origins = base_model.window_imgs_semantic(imgs)
 
                     # 2. Spostamento su GPU e conversione in float
-                    if not args.cpu:
-                        crops = crops.float().cuda()
-                    else:
-                        crops = crops.float()
+                    crops = crops.float().to(device)
 
                     # 3. Inferenza di rete: ottiene predizioni per le maschere e le classi per ogni blocco
                     # mask_logits_per_block: output delle query per definire le aree delle maschere
@@ -300,11 +271,26 @@ def main():
                     # Riassembla i crop per ricostruire l'immagine intera originaria (orig_h, orig_w)
                     scores_list = base_model.revert_window_logits_semantic(crop_scores, origins, img_sizes)
                     semantic_scores = scores_list[0]  # [C, orig_h, orig_w]
+                    # =========================================================================
+                    # AGGREGAZIONE SCORE COCO -> CATEGORIE CITYSCAPES
+                    # =========================================================================
+                    if args.model == 'coco':
+                        semantic_scores = aggregate_coco_scores_to_cityscapes(semantic_scores)
+                    # =========================================================================
+                    
+                    if args.save_inf:
+                        save_dir = f"/content/drive/MyDrive/project/saved_logits/{args.model}/{dataset_name}"
+                        os.makedirs(save_dir, exist_ok=True)
+                        img_name = os.path.splitext(os.path.basename(path))[0]
+                        torch.save(semantic_scores.float().cpu(), os.path.join(save_dir, f"{img_name}.pt"))
+                    
                     del crop_scores, scores_list
+            
 
                 # Prepariamo le maschere booleane per recuperare velocemente i pixel validi
                 ood_mask = (ood_gts == 1)
                 ind_mask = (ood_gts == 0)
+
 
                 # --- F. CALCOLO E SALVATAGGIO DEGLI SCORES ANOMALIA ---
                 for method in methods_to_evaluate:

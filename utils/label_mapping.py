@@ -1,7 +1,8 @@
 import numpy as np
+import torch
 
 
-IGNORE_INDEX = 19
+VOID_INDEX = 19
 
 
 def get_coco_to_cityscapes_mapping():
@@ -32,7 +33,7 @@ def get_coco_to_cityscapes_mapping():
         18 bicycle
     """
     
-    coco_to_cityscapes = np.full(256, IGNORE_INDEX, dtype=np.uint8)
+    coco_to_cityscapes = np.full(256, VOID_INDEX, dtype=np.uint8)
 
     coco_to_cityscapes[0] = 11    # person -> person
     coco_to_cityscapes[1] = 18    # bicycle -> bicycle
@@ -64,3 +65,33 @@ def get_coco_to_cityscapes_mapping():
     coco_to_cityscapes[131] = 3   # wall-other-merged -> wall
 
     return coco_to_cityscapes
+
+
+def aggregate_coco_scores_to_cityscapes(semantic_scores):
+    # Creiamo un tensore vuoto su GPU con 19 canali (come le classi Cityscapes)
+    H, W = semantic_scores.shape[1], semantic_scores.shape[2]
+    device_scores = semantic_scores.device
+    aggregated_scores = torch.zeros((19, H, W), dtype=semantic_scores.dtype, device=device_scores)
+    
+    # Sommiamo i logit COCO nei rispettivi canali Cityscapes
+    aggregated_scores[0]  = semantic_scores[100]          # road -> road
+    aggregated_scores[1]  = semantic_scores[123]          # pavement -> sidewalk
+    aggregated_scores[2]  = semantic_scores[[82, 91, 101, 129]].sum(dim=0)  # bridge, house, building -> building
+    aggregated_scores[3]  = semantic_scores[[109, 110, 111, 112, 131]].sum(dim=0) # TUTTI I MURI -> wall
+    aggregated_scores[4]  = semantic_scores[117]          # fence -> fence
+    # Gli indici 5 (pole) e 12 (rider) in COCO non hanno corrispondenze dirette, rimangono a 0 nel tensore inizializzato
+    aggregated_scores[6]  = semantic_scores[9]            # traffic light -> traffic light
+    aggregated_scores[7]  = semantic_scores[11]           # stop sign -> traffic sign
+    aggregated_scores[8]  = semantic_scores[[116, 125]].sum(dim=0) # tree, grass -> vegetation
+    aggregated_scores[9]  = semantic_scores[[90, 102, 126]].sum(dim=0) # gravel, sand, dirt -> terrain
+    aggregated_scores[10] = semantic_scores[119]          # sky -> sky
+    aggregated_scores[11] = semantic_scores[0]            # person -> person
+    aggregated_scores[13] = semantic_scores[2]            # car -> car
+    aggregated_scores[14] = semantic_scores[7]            # truck -> truck
+    aggregated_scores[15] = semantic_scores[5]            # bus -> bus
+    aggregated_scores[16] = semantic_scores[6]            # train -> train
+    aggregated_scores[17] = semantic_scores[3]            # motorcycle -> motorcycle
+    aggregated_scores[18] = semantic_scores[1]            # bicycle -> bicycle
+    
+    # Sostituiamo il tensore originale con quello aggregato a 19 canali
+    return aggregated_scores

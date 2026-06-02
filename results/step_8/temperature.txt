@@ -1,0 +1,64 @@
+
+=======================================================
+ OTTIMIZZAZIONE TEMPERATURA PER MODELLO: CITYSCAPES
+=======================================================
+
+--- Dataset: RoadAnomaly ---
+  T = 0.25 | MSP -> AUPRC: 72.07% | FPR@TPR95: 16.26%
+  T = 0.50 | MSP -> AUPRC: 72.26% | FPR@TPR95: 15.75%
+  T = 0.75 | MSP -> AUPRC: 72.38% | FPR@TPR95: 15.58%
+  T = 1.00 | MSP -> AUPRC: 72.46% | FPR@TPR95: 15.53%
+  T = 1.10 | MSP -> AUPRC: 72.49% | FPR@TPR95: 15.52%
+  T = 1.25 | MSP -> AUPRC: 72.52% | FPR@TPR95: 15.51%
+  T = 1.50 | MSP -> AUPRC: 72.58% | FPR@TPR95: 15.49%
+  T = 2.00 | MSP -> AUPRC: 72.66% | FPR@TPR95: 15.48%
+  T = 3.00 | MSP -> AUPRC: 72.78% | FPR@TPR95: 15.46%
+  T = 5.00 | MSP -> AUPRC: 72.96% | FPR@TPR95: 15.45%
+
+--- Dataset: RoadAnomaly21 ---
+  T = 0.25 | MSP -> AUPRC: 67.79% | FPR@TPR95: 30.40%
+  T = 0.50 | MSP -> AUPRC: 67.94% | FPR@TPR95: 30.42%
+  T = 0.75 | MSP -> AUPRC: 68.03% | FPR@TPR95: 30.42%
+  T = 1.00 | MSP -> AUPRC: 68.10% | FPR@TPR95: 30.42%
+  T = 1.10 | MSP -> AUPRC: 68.12% | FPR@TPR95: 30.42%
+  T = 1.25 | MSP -> AUPRC: 68.15% | FPR@TPR95: 30.42%
+  T = 1.50 | MSP -> AUPRC: 68.19% | FPR@TPR95: 30.42%
+  T = 2.00 | MSP -> AUPRC: 68.26% | FPR@TPR95: 30.42%
+  T = 3.00 | MSP -> AUPRC: 68.38% | FPR@TPR95: 30.43%
+  T = 5.00 | MSP -> AUPRC: 68.55% | FPR@TPR95: 30.43%
+
+--- Dataset: RoadObsticle21 ---
+  T = 0.25 | MSP -> AUPRC: 94.13% | FPR@TPR95: 0.37%
+  T = 0.50 | MSP -> AUPRC: 94.17% | FPR@TPR95: 0.37%
+  T = 0.75 | MSP -> AUPRC: 94.18% | FPR@TPR95: 0.37%
+  T = 1.00 | MSP -> AUPRC: 94.19% | FPR@TPR95: 0.37%
+  T = 1.10 | MSP -> AUPRC: 94.19% | FPR@TPR95: 0.37%
+  T = 1.25 | MSP -> AUPRC: 94.19% | FPR@TPR95: 0.37%
+  T = 1.50 | MSP -> AUPRC: 94.19% | FPR@TPR95: 0.37%
+  T = 2.00 | MSP -> AUPRC: 94.19% | FPR@TPR95: 0.37%
+  T = 3.00 | MSP -> AUPRC: 94.19% | FPR@TPR95: 0.37%
+  T = 5.00 | MSP -> AUPRC: 94.20% | FPR@TPR95: 0.37%
+
+--- Dataset: fs_static ---
+  T = 0.25 | MSP -> AUPRC: 58.09% | FPR@TPR95: 43.45%
+  T = 0.50 | MSP -> AUPRC: 58.17% | FPR@TPR95: 43.46%
+  T = 0.75 | MSP -> AUPRC: 58.18% | FPR@TPR95: 43.46%
+  T = 1.00 | MSP -> AUPRC: 58.19% | FPR@TPR95: 43.46%
+  T = 1.10 | MSP -> AUPRC: 58.19% | FPR@TPR95: 43.47%
+  T = 1.25 | MSP -> AUPRC: 58.20% | FPR@TPR95: 43.47%
+  T = 1.50 | MSP -> AUPRC: 58.20% | FPR@TPR95: 43.47%
+  T = 2.00 | MSP -> AUPRC: 58.20% | FPR@TPR95: 43.47%
+  T = 3.00 | MSP -> AUPRC: 58.20% | FPR@TPR95: 43.47%
+  T = 5.00 | MSP -> AUPRC: 58.20% | FPR@TPR95: 43.47%
+
+--- Dataset: FS_LostFound_full ---
+  T = 0.25 | MSP -> AUPRC: 16.36% | FPR@TPR95: 13.03%
+  T = 0.50 | MSP -> AUPRC: 16.38% | FPR@TPR95: 13.02%
+  T = 0.75 | MSP -> AUPRC: 16.39% | FPR@TPR95: 13.01%
+  T = 1.00 | MSP -> AUPRC: 16.39% | FPR@TPR95: 13.01%
+  T = 1.10 | MSP -> AUPRC: 16.40% | FPR@TPR95: 13.01%
+  T = 1.25 | MSP -> AUPRC: 16.40% | FPR@TPR95: 13.01%
+  T = 1.50 | MSP -> AUPRC: 16.40% | FPR@TPR95: 13.01%
+  T = 2.00 | MSP -> AUPRC: 16.41% | FPR@TPR95: 13.01%
+  T = 3.00 | MSP -> AUPRC: 16.43% | FPR@TPR95: 13.01%
+  T = 5.00 | MSP -> AUPRC: 16.45% | FPR@TPR95: 13.01%

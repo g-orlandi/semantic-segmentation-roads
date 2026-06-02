@@ -8,9 +8,9 @@ from tqdm.notebook import tqdm
 from utils.label_mapping import get_coco_to_cityscapes_mapping
 
 
-IGNORE_INDEX = 19   # pixels not covered by any GT mask, and COCO classes not mapped to Cityscapes
-
-
+IGNORE_INDEX = 255   # pixels not covered by any GT mask, and COCO classes not mapped to Cityscapes
+        
+        
 def infer_semantic(model, img, target, device):
     """
     Run semantic inference on a single image.
@@ -78,12 +78,12 @@ def evaluate_semantic(model, val_loader, device, coco=False, limit_batches=None)
             pred, gt = infer_semantic(model, img, target, device)
             if coco:
                 pred = coco_to_cityscapes[pred]
-            # GT is already in [0..18] plus {IGNORE_INDEX}.
+            
             metric.update(
                 torch.from_numpy(pred.astype(np.int64)).to(device),
                 torch.from_numpy(gt.astype(np.int64)).to(device)
             )
-
+            
     iou_per_class = metric.compute()[:19].cpu().numpy()  # only first 19 classes
     miou = float(iou_per_class.mean())
     

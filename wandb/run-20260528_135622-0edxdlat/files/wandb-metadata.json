@@ -1,0 +1,40 @@
+{
+  "os": "Linux-6.6.122+-x86_64-with-glibc2.35",
+  "python": "CPython 3.12.13",
+  "startedAt": "2026-05-28T13:56:22.309239Z",
+  "program": "02.ipynb",
+  "codePath": "02.ipynb",
+  "git": {
+    "remote": "https://github.com/g-orlandi/semantic-segmentation-roads.git",
+    "commit": "6102c28366e7c49a3a38ffaf2d4ea4acc1dd9cfb"
+  },
+  "email": "ai.group.3434@gmail.com",
+  "root": ".",
+  "host": "e910b297e3dc",
+  "executable": "/usr/bin/python3",
+  "colab": "https://colab.research.google.com/notebook#fileId=1w_xgfhSF2wMXAuJ9w1zQLXaHl0IZgPoO",
+  "cpu_count": 1,
+  "cpu_count_logical": 2,
+  "gpu": "Tesla T4",
+  "gpu_count": 1,
+  "disk": {
+    "/": {
+      "total": "120942624768",
+      "used": "60392210432"
+    }
+  },
+  "memory": {
+    "total": "13605830656"
+  },
+  "gpu_nvidia": [
+    {
+      "name": "Tesla T4",
+      "memoryTotal": "16106127360",
+      "cudaCores": 2560,
+      "architecture": "Turing",
+      "uuid": "GPU-5ae1a82f-253a-be7b-331e-77e76b62609c"
+    }
+  ],
+  "cudaVersion": "13.0",
+  "writerId": "pd825qwn445mhrrdxx7il8ruxhp2y7nf"
+}
