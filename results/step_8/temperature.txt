@@ -1,6 +1,5 @@
-
 =======================================================
- OTTIMIZZAZIONE TEMPERATURA PER MODELLO: CITYSCAPES
+    CITYSCAPES
 =======================================================
 
 --- Dataset: RoadAnomaly ---

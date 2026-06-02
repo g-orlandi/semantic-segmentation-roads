@@ -1,5 +1,3 @@
-
-
 === Dataset: FS_LostFound_full ===
 Method: MSP        | AUPRC: 16.3939 | FPR@TPR95: 13.0125
 Method: MAXLOGIT   | AUPRC: 16.3775 | FPR@TPR95: 12.7765

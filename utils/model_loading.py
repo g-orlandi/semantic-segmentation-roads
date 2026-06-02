@@ -1,6 +1,7 @@
 import importlib
 import torch
 import yaml
+from pathlib import Path
 
 
 def load_weights(model, state_dict_path, device):
@@ -30,9 +31,6 @@ def load_weights(model, state_dict_path, device):
 
     return model
 
-from pathlib import Path
-import yaml
-
 
 def get_config(coco=False):
     """
@@ -49,6 +47,7 @@ def get_config(coco=False):
         config = yaml.safe_load(f)
 
     return config
+
 
 def build_model(config, img_size, num_classes, coco=False, masked_attn_enabled=True):
     """

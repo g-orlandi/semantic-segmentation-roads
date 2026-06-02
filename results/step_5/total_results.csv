@@ -1,0 +1,6 @@
+weights,mIoU
+coco,51.79
+cityscapes,81.6
+cityscapes-ft1,57.6
+cityscapes-ft2,71.9
+cityscapes-ft3,72.3

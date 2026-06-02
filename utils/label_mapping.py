@@ -10,7 +10,7 @@ def get_coco_to_cityscapes_mapping():
     Return a lookup table that maps selected COCO class IDs to Cityscapes train IDs.
 
     Classes that do not have a reasonable Cityscapes equivalent are mapped to
-    IGNORE_INDEX. The returned array can be directly indexed with predicted COCO
+    VOID_INDEX. The returned array can be directly indexed with predicted COCO
     class IDs.
 
     Cityscapes train IDs:
@@ -68,18 +68,15 @@ def get_coco_to_cityscapes_mapping():
 
 
 def aggregate_coco_scores_to_cityscapes(semantic_scores):
-    # Creiamo un tensore vuoto su GPU con 19 canali (come le classi Cityscapes)
     H, W = semantic_scores.shape[1], semantic_scores.shape[2]
     device_scores = semantic_scores.device
     aggregated_scores = torch.zeros((19, H, W), dtype=semantic_scores.dtype, device=device_scores)
     
-    # Sommiamo i logit COCO nei rispettivi canali Cityscapes
     aggregated_scores[0]  = semantic_scores[100]          # road -> road
     aggregated_scores[1]  = semantic_scores[123]          # pavement -> sidewalk
     aggregated_scores[2]  = semantic_scores[[82, 91, 101, 129]].sum(dim=0)  # bridge, house, building -> building
-    aggregated_scores[3]  = semantic_scores[[109, 110, 111, 112, 131]].sum(dim=0) # TUTTI I MURI -> wall
+    aggregated_scores[3]  = semantic_scores[[109, 110, 111, 112, 131]].sum(dim=0) # All different walls -> wall
     aggregated_scores[4]  = semantic_scores[117]          # fence -> fence
-    # Gli indici 5 (pole) e 12 (rider) in COCO non hanno corrispondenze dirette, rimangono a 0 nel tensore inizializzato
     aggregated_scores[6]  = semantic_scores[9]            # traffic light -> traffic light
     aggregated_scores[7]  = semantic_scores[11]           # stop sign -> traffic sign
     aggregated_scores[8]  = semantic_scores[[116, 125]].sum(dim=0) # tree, grass -> vegetation
@@ -93,5 +90,4 @@ def aggregate_coco_scores_to_cityscapes(semantic_scores):
     aggregated_scores[17] = semantic_scores[3]            # motorcycle -> motorcycle
     aggregated_scores[18] = semantic_scores[1]            # bicycle -> bicycle
     
-    # Sostituiamo il tensore originale con quello aggregato a 19 canali
     return aggregated_scores
