@@ -1,86 +1,239 @@
-# Anomaly Segmentation Eval
+# Anomaly Segmentation Evaluation
 
-In this folder you can find some functions to evaluate your model's output. It is designed to load the ERFNet checkpoint so you need to change it when evaluating the EoMT model. The main function to look for is evalAnomaly.py that produces the Anomaly Segmentation results. Other functions could be useful for extensions.
+This folder contains the evaluation scripts used for road anomaly segmentation experiments.  
+The current evaluation pipeline is organized around three main modules:
 
-## Requirements:
+- `evalAnomalyEOMT.py`: anomaly segmentation evaluation for EoMT models.
+- `evalAnomalyERFNET.py`: anomaly segmentation evaluation for the ERFNet baseline.
+- `temperature.py`: temperature-scaling experiments for MSP-based anomaly scoring using saved semantic logits.
 
-It could work with the default runtime of Colab or other versions of the libraries but these are the requirements this code was tested on.
+The scripts evaluate whether a semantic segmentation model can assign high anomaly scores to out-of-distribution pixels and low anomaly scores to in-distribution road-scene pixels.
 
-* [**Python 3.6**](https://www.python.org/): If you don't have Python3.6 in your system, I recommend installing it with [Anaconda](https://www.anaconda.com/download/#linux)
-* [**PyTorch**](http://pytorch.org/): Make sure to install the Pytorch version for Python 3.6 with CUDA support (code only tested for CUDA 8.0 but it should work with higher versions).
-* **Additional Python packages**: numpy, matplotlib, Pillow, torchvision and visdom (optional for --visualize flag)
-* **For testing the anomaly segmentation model**: Road Anomaly, Road Obstacle, and Fishyscapes dataset. All testing images are provided here [Link](https://drive.google.com/file/d/1r2eFANvSlcUjxcerjC8l6dRa0slowMpx/view).
+## Requirements
 
-## Anomaly Inference:
+The code was mainly used in a Colab-style environment. Exact versions may vary, but the following packages are required:
 
-* Anomaly Inference Command:```python evalAnomaly.py --input '/home/amarinai/segmentation/unk-dataset/RoadAnomaly21/images/*.png```. Change the dataset path ```'/home/amarinai/segmentation/unk-dataset/RoadAnomaly21/images/*.png```accordingly.
+- Python 3.x
+- PyTorch
+- torchvision
+- numpy
+- Pillow
+- scikit-learn
+- PyYAML
+- matplotlib
+- `ood_metrics`
+- CUDA-enabled GPU recommended for EoMT evaluation
 
-## Functions for evaluating/visualizing the network's output
+For the legacy ERFNet/Cityscapes utilities, `visdom` is only required when using the optional `--visualize` flag.
 
-Currently there are 5 usable functions to evaluate stuff:
-- evalAnomaly
-- eval_cityscapes_color
-- eval_cityscapes_server
-- eval_iou
-- eval_forwardTime
+## Dataset structure
 
+The anomaly evaluation scripts expect a root folder containing the validation datasets, each with the following structure:
 
-## evalAnomaly.py
-
-This code can be used to produce anomaly segmentation results on various anomaly metrics on the validation datasets you can download [here](https://drive.google.com/file/d/1zcayoIIJztxKuHOIjmSjGoQBDy4RdETr/view?usp=drive_link)
-
-**Examples:**
-```
-python evalAnomaly.py --input '/home/amarinai/ViT-Adapter/segmentation/unk-dataset/RoadAnomaly21/images/*.png'
-```
-
-# Code on Citiscapes (probably not needed)
-
-This code can be used to produce segmentation of the Cityscapes images in color for visualization purposes. By default it saves images in eval/save_color/ folder. You can also visualize results in visdom with --visualize flag.
-
-* [**The Cityscapes dataset**](https://www.cityscapes-dataset.com/): Download the "leftImg8bit" for the RGB images and the "gtFine" for the labels. **Please note that for training you should use the "_labelTrainIds" and not the "_labelIds", you can download the [cityscapes scripts](https://github.com/mcordts/cityscapesScripts) and use the [conversor](https://github.com/mcordts/cityscapesScripts/blob/master/cityscapesscripts/preparation/createTrainIdLabelImgs.py) to generate trainIds from labelIds**
-## eval_cityscapes_color.py 
-
-**Options:** Specify the Cityscapes folder path with '--datadir' option. Select the cityscapes subset with '--subset' ('val', 'test', 'train' or 'demoSequence'). For other options check the bottom side of the file.
-
-**Examples:**
-```
-python eval_cityscapes_color.py --datadir /home/datasets/cityscapes/ --subset val
-```
-
-## eval_cityscapes_server.py 
-
-This code can be used to produce segmentation of the Cityscapes images and convert the output indices to the original 'labelIds' so it can be evaluated using the scripts from Cityscapes dataset (evalPixelLevelSemanticLabeling.py) or uploaded to Cityscapes test server. By default it saves images in eval/save_results/ folder.
-
-**Options:** Specify the Cityscapes folder path with '--datadir' option. Select the cityscapes subset with '--subset' ('val', 'test', 'train' or 'demoSequence'). For other options check the bottom side of the file.
-
-**Examples:**
-```
-python eval_cityscapes_server.py --datadir /home/datasets/cityscapes/ --subset val
+```text
+Validation_Dataset/
+├── FS_LostFound_full/
+│   ├── images/
+│   └── labels_masks/
+├── RoadAnomaly/
+│   ├── images/
+│   └── labels_masks/
+├── RoadAnomaly21/
+│   ├── images/
+│   └── labels_masks/
+├── RoadObsticle21/
+│   ├── images/
+│   └── labels_masks/
+└── fs_static/
+    ├── images/
+    └── labels_masks/
 ```
 
-## eval_iou.py 
+By default, the anomaly labels are interpreted as follows:
 
-This code can be used to calculate the IoU (mean and per-class) in a subset of images with labels available, like Cityscapes val/train sets.
+- `0`: in-distribution pixels
+- `1`: anomaly / out-of-distribution pixels
+- `255`: ignored pixels
 
-**Options:** Specify the Cityscapes folder path with '--datadir' option. Select the cityscapes subset with '--subset' ('val' or 'train'). For other options check the bottom side of the file.
+For `RoadAnomaly`, labels are remapped internally so that `0` corresponds to in-distribution pixels and `2` corresponds to anomaly pixels.
 
-**Examples:**
+## Main scripts
+
+## `evalAnomalyEOMT.py`
+
+This is the main evaluation script for EoMT-based models. It supports three model variants:
+
+- `cityscapes`
+- `coco`
+- `coco_finetuned`
+
+The script loads the selected EoMT configuration and checkpoint, performs semantic inference on each anomaly dataset, computes pixel-wise anomaly scores, and reports:
+
+- AUPRC
+- FPR@TPR95
+
+The evaluated anomaly scoring methods are:
+
+- `MSP`: `1 - max(softmax(score))`
+- `MaxLogit`: `-max(score)`
+- `MaxEntropy`: entropy of the softmax distribution
+- `RbA`: `-sum(tanh(score))`
+
+### Example
+
+```bash
+python evalAnomalyEOMT.py \
+  --base_dir /content/drive/MyDrive/project/Anomaly_Validation_Datasets/Validation_Dataset \
+  --model cityscapes
 ```
-python eval_iou.py --datadir /home/datasets/cityscapes/ --subset val
+
+To evaluate the COCO-pretrained checkpoint:
+
+```bash
+python evalAnomalyEOMT.py \
+  --base_dir /content/drive/MyDrive/project/Anomaly_Validation_Datasets/Validation_Dataset \
+  --model coco
 ```
 
-## eval_forwardTime.py
-This function loads a model specified by '-m' and enters a loop to continuously estimate forward pass time (fwt) in the specified resolution. 
+To evaluate the COCO-to-Cityscapes fine-tuned checkpoint:
 
-**Options:** Option '--width' specifies the width (default: 1024). Option '--height' specifies the height (default: 512). For other options check the bottom side of the file.
-
-**Examples:**
-```
-python eval_forwardTime.py
+```bash
+python evalAnomalyEOMT.py \
+  --base_dir /content/drive/MyDrive/project/Anomaly_Validation_Datasets/Validation_Dataset \
+  --model coco_finetuned
 ```
 
-**NOTE**: The pytorch code is a bit faster, but cudahalf (FP16) seems to give problems at the moment for some pytorch versions so this code only runs at FP32 (a bit slower).
+### Saving semantic scores
 
+The `--save_inf` flag saves the semantic score tensors to disk. This is useful when running `temperature.py`, because the temperature-scaling script reuses the saved logits instead of recomputing inference.
 
+```bash
+python evalAnomalyEOMT.py \
+  --base_dir /content/drive/MyDrive/project/Anomaly_Validation_Datasets/Validation_Dataset \
+  --model cityscapes \
+  --save_inf
+```
 
+Saved tensors are stored under:
+
+```text
+/content/drive/MyDrive/project/saved_logits/<model_name>/<dataset_name>/<image_name>.pt
+```
+
+## `evalAnomalyERFNET.py`
+
+This script evaluates the ERFNet baseline on the same anomaly validation datasets.
+
+It loads the ERFNet architecture and checkpoint, computes the segmentation logits, applies post-hoc anomaly scoring, and reports:
+
+- AUPRC
+- FPR@TPR95
+
+The evaluated anomaly scoring methods are:
+
+- `MSP`
+- `MaxLogit`
+- `MaxEntropy`
+
+Unlike the EoMT script, `evalAnomalyERFNET.py` uses the raw ERFNet output logits directly.
+
+### Example
+
+```bash
+python evalAnomalyERFNET.py \
+  --base_dir /content/drive/MyDrive/project/Anomaly_Validation_Datasets/Validation_Dataset \
+  --loadDir ../trained_models/ \
+  --loadWeights erfnet_pretrained.pth \
+  --loadModel erfnet.py
+```
+
+Results are appended to:
+
+```text
+results.txt
+```
+
+## `temperature.py`
+
+This module performs a temperature-scaling sweep for MSP-based anomaly detection.
+
+It assumes that semantic score tensors have already been saved by running `evalAnomalyEOMT.py` with `--save_inf`. For each temperature value, it computes:
+
+```text
+MSP_T = 1 - max(softmax(scores / T))
+```
+
+and reports:
+
+- AUPRC
+- FPR@TPR95
+
+The current script tests the following temperature values:
+
+```python
+[0.25, 0.5, 0.75, 1.0, 1.1, 1.25, 1.5, 2.0, 3.0, 5.0]
+```
+
+---
+
+## Legacy Cityscapes utilities
+
+The repository also contains legacy utilities inherited from the ERFNet evaluation code. These are not the main anomaly-evaluation scripts, but they may still be useful for debugging or visualization.
+
+### `eval_cityscapes_color.py`
+
+Produces colorized semantic segmentation predictions on Cityscapes images and saves them under:
+
+```text
+save_color/
+```
+
+Example:
+
+```bash
+python eval_cityscapes_color.py \
+  --datadir /home/datasets/cityscapes/ \
+  --subset val
+```
+
+### `eval_cityscapes_server.py`
+
+Produces Cityscapes predictions converted back to original `labelIds`, suitable for evaluation with the official Cityscapes scripts or for submission to the Cityscapes server.
+
+Outputs are saved under:
+
+```text
+save_results/
+```
+
+Example:
+
+```bash
+python eval_cityscapes_server.py \
+  --datadir /home/datasets/cityscapes/ \
+  --subset val
+```
+
+### `eval_iou.py`
+
+Computes mean IoU and per-class IoU on labeled Cityscapes subsets.
+
+Example:
+
+```bash
+python eval_iou.py \
+  --datadir /home/datasets/cityscapes/ \
+  --subset val
+```
+
+### `eval_forwardTime.py`
+
+Measures ERFNet forward-pass time at a given resolution.
+
+Example:
+
+```bash
+python eval_forwardTime.py \
+  --width 1024 \
+  --height 512
+```
