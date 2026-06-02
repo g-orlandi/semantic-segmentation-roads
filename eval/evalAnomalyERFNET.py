@@ -85,7 +85,6 @@ def main():
     
     args = parser.parse_args()
 
-    # Mappatura dei dataset e relative estensioni delle immagini
     DATASETS = {
         "FS_LostFound_full": "png",
         "RoadAnomaly": "jpg",
@@ -126,10 +125,8 @@ def main():
     print("Model and weights LOADED successfully\n")
     model.eval()
 
-    # Apriamo il file una sola volta per aggiungere i risultati
     with open('results.txt', 'a') as file:
         
-        # Iteriamo su tutti e 5 i dataset
         for dataset_name, ext in DATASETS.items():
             print(f"==================================================")
             print(f" Inizio valutazione Dataset: {dataset_name}")
@@ -144,14 +141,11 @@ def main():
                 file.write(f"Nessuna immagine trovata.\n")
                 continue
 
-            # Inizializza le liste per questo specifico dataset
             anomaly_score_lists = {method: [] for method in methods_to_evaluate}
             ood_gts_list = []
 
             for path in image_paths:
-                # 1. Carica e prepara la Ground Truth
                 pathGT = path.replace("images", "labels_masks")
-                # Indipendentemente da jpg o webp, la ground truth è sempre un .png
                 base_path_gt, _ = os.path.splitext(pathGT)
                 pathGT = base_path_gt + ".png"
 
@@ -162,8 +156,7 @@ def main():
                 mask = target_transform(mask)
                 ood_gts = np.array(mask)
 
-                # Mappatura etichette
-                if "RoadAnomaly" in pathGT: # Copre sia RoadAnomaly che RoadAnomaly21
+                if "RoadAnomaly" in pathGT: 
                     ood_gts = np.where((ood_gts == 2), 1, ood_gts)
                 if "LostAndFound" in pathGT in pathGT:
                     ood_gts = np.where((ood_gts == 0), 255, ood_gts)
@@ -175,12 +168,10 @@ def main():
                     ood_gts = np.where((ood_gts == 255), 1, ood_gts)
 
                 if 1 not in np.unique(ood_gts):
-                    # Nessuna anomalia, saltiamo
                     continue
                 
                 ood_gts_list.append(ood_gts)
 
-                # 2. Inferenza del modello
                 images = input_transform(Image.open(path).convert('RGB')).unsqueeze(0).float()
                 if not args.cpu:
                     images = images.cuda()
@@ -190,7 +181,6 @@ def main():
 
                 logits = result.squeeze(0)
 
-                # 3. Calcoliamo gli score per i 3 metodi
                 for method in methods_to_evaluate:
                     anomaly_result = compute_anomaly_score(logits, method)
                     anomaly_score_lists[method].append(anomaly_result)
@@ -198,7 +188,6 @@ def main():
                 del result, logits, ood_gts, mask
                 torch.cuda.empty_cache()
 
-            # --- Calcolo metriche per il dataset corrente ---
             if len(ood_gts_list) == 0:
                 print(f"Nessun dato valido (anomalia) trovato in {dataset_name}.")
                 file.write("Nessuna anomalia rilevata nelle maschere.\n")
